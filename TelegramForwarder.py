@@ -1,6 +1,7 @@
 import time
 import asyncio
 from telethon.sync import TelegramClient
+import re
 
 class TelegramForwarder:
     def __init__(self, api_id, api_hash, phone_number):
@@ -11,21 +12,20 @@ class TelegramForwarder:
 
     async def list_chats(self):
         await self.client.connect()
-
-        # Ensure you're authorized
+        
+         # Ensure you're authorized
         if not await self.client.is_user_authorized():
             await self.client.send_code_request(self.phone_number)
             await self.client.sign_in(self.phone_number, input('Enter the code: '))
-
+        
         # Get a list of all the dialogs (chats)
         dialogs = await self.client.get_dialogs()
-        chats_file = open(f"chats_of_{self.phone_number}.txt", "w")
-        # Print information about each chat
-        for dialog in dialogs:
-            print(f"Chat ID: {dialog.id}, Title: {dialog.title}")
-            chats_file.write(f"Chat ID: {dialog.id}, Title: {dialog.title} \n")
-          
-
+        with open(f"chats_of_{self.phone_number}.txt", "w", encoding="utf-8") as chats_file:
+            # Print information about each chat
+            for dialog in dialogs:
+                print(f"Chat ID: {dialog.id}, Title: {dialog.title}")
+                chats_file.write(f"Chat ID: {dialog.id}, Title: {dialog.title} \n")
+        
         print("List of groups printed successfully!")
 
     async def forward_messages_to_channel(self, source_chat_id, destination_channel_id, keywords):
@@ -43,21 +43,37 @@ class TelegramForwarder:
             # Get new messages since the last checked message
             messages = await self.client.get_messages(source_chat_id, min_id=last_message_id, limit=None)
 
+            
             for message in reversed(messages):
                 # Check if the message text includes any of the keywords
                 if keywords:
-                    if message.text and any(keyword in message.text.lower() for keyword in keywords):
-                        print(f"Message contains a keyword: {message.text}")
+                    for keyword in keywords:
+                        if keyword == "ca":
+                            pattern = re.compile(r"[A-Za-z0-9]{43,44}")
+                            if message.text:
+                                match = pattern.search(message.text)
+                                if match:
+                                    matched_text = match.group()
+                                    print(f"Message matches the pattern: {matched_text}")
 
-                        # Forward the message to the destination channel
-                        await self.client.send_message(destination_channel_id, message.text)
+                                    # Forward the matching part of the message to the destination channel
+                                    await self.client.send_message(destination_channel_id, matched_text)
 
-                        print("Message forwarded")
+                                    print("Message forwarded")
+                        else:
+                            if message.text and keyword in message.text.lower():
+                                print(f"Message contains a keyword: {message.text}")
+
+                                # Forward the message to the destination channel
+                                await self.client.send_message(destination_channel_id, message.text)
+
+                                print("Message forwarded")
                 else:
-                        # Forward the message to the destination channel
-                        await self.client.send_message(destination_channel_id, message.text)
+                    # Forward the message to the destination channel
+                    await self.client.send_message(destination_channel_id, message.text)
 
-                        print("Message forwarded")
+                    print("Message forwarded")
+
 
 
                 # Update the last message ID
