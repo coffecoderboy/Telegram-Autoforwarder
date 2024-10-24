@@ -9,6 +9,7 @@ class TelegramForwarder:
         self.api_hash = api_hash
         self.phone_number = phone_number
         self.client = TelegramClient('session_' + phone_number, api_id, api_hash)
+        self.trojan_bot_id = '6997957200'  # Assuming you have the bot ID
 
     async def list_chats(self):
         await self.client.connect()
@@ -56,10 +57,10 @@ class TelegramForwarder:
                                     matched_text = match.group()
                                     print(f"Message matches the pattern: {matched_text}")
 
-                                    # Forward the matching part of the message to the destination channel
-                                    await self.client.send_message(destination_channel_id, matched_text)
+                                    # Send the matching part of the message as a new message to the Trojan bot
+                                    await self.client.send_message(self.trojan_bot_id, f"Filtered message: {matched_text}")
 
-                                    print("Message forwarded")
+                                    print("Message sent to Trojan bot")
                         else:
                             if message.text and keyword in message.text.lower():
                                 print(f"Message contains a keyword: {message.text}")
